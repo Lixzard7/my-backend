@@ -2,6 +2,9 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+app.use(cors({
+  origin: 'https://syncbeats.netlify.app'
+}));
 const multer = require('multer');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -758,4 +761,5 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
+
 });
