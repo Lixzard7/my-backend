@@ -74,7 +74,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({ ({ dest: '/tmp' });
   storage: storage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/flac'];
@@ -763,3 +763,4 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
