@@ -26,7 +26,7 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 3000;
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production' 
-  ? ['your-domain.com'] 
+  ? ['your-site.netlify.app', 'another-safe-domain.com'] 
   : ['localhost', '127.0.0.1'];
 
 // Enhanced Security Middleware
@@ -761,6 +761,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
