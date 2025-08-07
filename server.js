@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const app = express();
 app.use(cors({
   origin: 'https://syncbeats.netlify.app'
 }));
@@ -11,7 +12,6 @@ const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
-const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -761,6 +761,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
