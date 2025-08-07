@@ -61,11 +61,9 @@ app.use(express.static('public'));
 // Enhanced file upload with better error handling
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    const uploadDir = '/tmp' ;
     cb(null, uploadDir);
+   
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -246,7 +244,7 @@ app.post('/api/upload', (req, res) => {
     const fileInfo = {
       filename: req.file.filename,
       originalName: req.file.originalname,
-      url: `/uploads/${req.file.filename}`,
+      url:`https://your-backend.onrender.com/api/uploads/${req.file.filename}`,
       size: req.file.size,
       mimetype: req.file.mimetype,
       uploadedAt: Date.now()
@@ -763,6 +761,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
