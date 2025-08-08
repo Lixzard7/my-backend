@@ -4,7 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const app = express();
 app.use(cors({
-  origin: 'https://syncbeats.netlify.app'
+  origin: ['https://syncbeats.netlify.app' , 'http://localhost:3000']
 }));
 const multer = require('multer');
 const helmet = require('helmet');
@@ -761,6 +761,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
