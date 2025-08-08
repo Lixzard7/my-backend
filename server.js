@@ -245,7 +245,7 @@ app.post('/api/upload', (req, res) => {
     const fileInfo = {
       filename: req.file.filename,
       originalName: req.file.originalname,
-      url:`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+      url:`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
       size: req.file.size,
       mimetype: req.file.mimetype,
       uploadedAt: Date.now()
@@ -762,6 +762,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
