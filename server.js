@@ -56,6 +56,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+app.use('/uploads', express.static('/tmp'));
 app.use(express.static('public'));
 
 // Enhanced file upload with better error handling
@@ -244,7 +245,7 @@ app.post('/api/upload', (req, res) => {
     const fileInfo = {
       filename: req.file.filename,
       originalName: req.file.originalname,
-      url:`https://your-backend.onrender.com/api/uploads/${req.file.filename}`,
+      url:`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
       size: req.file.size,
       mimetype: req.file.mimetype,
       uploadedAt: Date.now()
@@ -761,6 +762,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
