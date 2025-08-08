@@ -5,7 +5,10 @@ const cors = require('cors');
 const app = express();
 app.use(cors({
   origin: ['https://syncbeats.netlify.app' , 'http://localhost:3000']
+   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+app.options("*", cors());
 const multer = require('multer');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -762,6 +765,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
