@@ -4,7 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const app = express();
 app.use(cors({
-  origin: ['https://syncbeats.netlify.app' , 'http://localhost:3000']
+  origin: ['https://syncbeats.netlify.app' , 'http://localhost:3000'],
    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -765,6 +765,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
