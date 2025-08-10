@@ -51,9 +51,10 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin || ALLOWED_ORIGINS.some(allowed => origin.includes(allowed))) {
       callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    } 
+    // else {
+    //   callback(new Error('Not allowed by CORS'));
+    // }
   },
   credentials: true
 }));
@@ -765,6 +766,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
