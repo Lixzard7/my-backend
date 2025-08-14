@@ -16,7 +16,7 @@ app.use(cors({
 }));
 app.options("*", cors());
 
-const server = http.createServer(app);
+//const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -787,6 +787,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
