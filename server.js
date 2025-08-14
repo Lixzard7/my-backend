@@ -2,18 +2,19 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const multer = require('multer');
+const helmet = require('helmet');
+const compression = require('compression');
+const path = require('path');
+const fs = require('fs');
 const app = express();
+const server = http.createServer(app);
 app.use(cors({
   origin: ['https://syncbeats.netlify.app' , 'http://localhost:3000'],
    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.options("*", cors());
-const multer = require('multer');
-const helmet = require('helmet');
-const compression = require('compression');
-const path = require('path');
-const fs = require('fs');
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -34,29 +35,49 @@ const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
 
 // Enhanced Security Middleware
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-      fontSrc: ["'self'", "fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      mediaSrc: ["'self'", "blob:", "data:"],
-      connectSrc: ["'self'", "ws:", "wss:"]
-    }
-  }
+  contentSecurityPolicy: false, // {
+  crossOriginEmbedderPolicy: false 
+ //   directives: {
+   //   defaultSrc: ["'self'"],
+     // styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      //fontSrc: ["'self'", "fonts.gstatic.com"],
+      //scriptSrc: ["'self'", "'unsafe-inline'"],
+      //mediaSrc: ["'self'", "blob:", "data:"],
+      //connectSrc: ["'self'", "ws:", "wss:"]
+  //  }
+  //}
 }));
 
 app.use(compression());
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.some(allowed => origin.includes(allowed))) {
+   origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://syncbeats.netlify.app',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
-    } 
-     else {
-     callback(new Error('Not allowed by CORS'));
-     }
+    } else {
+      console.log('CORS Error - Origin:', origin);
+      callback(null, true); // Allow all for now
+    }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+//  origin: (origin, callback) => {
+  //  if (!origin || ALLOWED_ORIGINS.some(allowed => origin.includes(allowed))) {
+    //  callback(null, true);
+   // } 
+     //else {
+    // callback(new Error('Not allowed by CORS'));
+    // }
+ // },
+  //credentials: true
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -766,6 +787,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
