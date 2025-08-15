@@ -97,7 +97,7 @@ app.use('/api/uploads', express.static('/tmp'))
       res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range, Content-Length');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
     
-  ,
+  
   // Enable directory listing for debugging (remove in production)
   dotfiles: 'ignore',
   etag: false,
@@ -812,6 +812,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
