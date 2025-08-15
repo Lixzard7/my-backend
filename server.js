@@ -81,7 +81,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
-app.use('/api/uploads', express.static('/tmp' , {
+app.use('/api/uploads', express.static('/tmp' , 
  //    const ext = path.toLowerCase();
    // if (ext.endsWith('.mp3') || ext.endsWith('.wav') || ext.endsWith('.ogg') || 
      //   ext.endsWith('.m4a') || ext.endsWith('.flac')) {
@@ -811,6 +811,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
