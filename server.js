@@ -82,31 +82,6 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use('/api/uploads', express.static('/tmp'))  
- //    const ext = path.toLowerCase();
-   // if (ext.endsWith('.mp3') || ext.endsWith('.wav') || ext.endsWith('.ogg') || 
-     //   ext.endsWith('.m4a') || ext.endsWith('.flac')) {
-      
-      // Essential headers for audio streaming
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-      
-      // CORS headers for cross-origin audio access
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range, Content-Length');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
-    
-  
-  // Enable directory listing for debugging (remove in production)
-  dotfiles: 'ignore',
-  etag: false,
-  extensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac'],
-  index: false,
-  maxAge: '1d',
-  redirect: false,
-    
-//});
 app.use(express.static('public'));
 
 // Enhanced file upload with better error handling
@@ -812,6 +787,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
