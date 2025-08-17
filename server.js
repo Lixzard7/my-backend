@@ -81,8 +81,29 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
-app.use('/api/uploads', express.static('/tmp'))  
 app.use(express.static('public'));
+// ✅ ADD THIS ENTIRE BLOCK HERE
+app.use('/api/uploads', express.static('/tmp', {
+  setHeaders: (res, path, stat) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    
+    if (path.endsWith('.mp3')) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+    } else if (path.endsWith('.wav')) {
+      res.setHeader('Content-Type', 'audio/wav');
+    } else if (path.endsWith('.ogg')) {
+      res.setHeader('Content-Type', 'audio/ogg');
+    } else if (path.endsWith('.m4a')) {
+      res.setHeader('Content-Type', 'audio/mp4');
+    }
+  }
+}));
+
+// Enhanced file upload with better error handling (your existing code continues...)
 
 // Enhanced file upload with better error handling
 const storage = multer.diskStorage({
@@ -787,6 +808,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
