@@ -69,7 +69,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 // ✅ ADD THIS ENTIRE BLOCK HERE
@@ -798,6 +798,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
