@@ -69,6 +69,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'Content-Range'] // ✅ ADD exposed headers for audio streaming
 }));
 //
 app.use(express.json({ limit: '10mb' }));
@@ -78,21 +79,52 @@ app.use('/api/uploads', express.static('/tmp', {
   setHeaders: (res, path, stat) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range, Accept-Ranges');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=86400');
     
-    if (path.endsWith('.mp3')) {
-      res.setHeader('Content-Type', 'audio/mpeg');
-    } else if (path.endsWith('.wav')) {
-      res.setHeader('Content-Type', 'audio/wav');
-    } else if (path.endsWith('.ogg')) {
-      res.setHeader('Content-Type', 'audio/ogg');
-    } else if (path.endsWith('.m4a')) {
-      res.setHeader('Content-Type', 'audio/mp4');
+    // ✅ ENHANCED: Better content type detection
+    const ext = path.toLowerCase().split('.').pop();
+    const contentTypes = {
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'm4a': 'audio/mp4',
+      'flac': 'audio/flac',
+      'aac': 'audio/aac'
+    };
+    
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
     }
+    
+    // ✅ ADD: Additional headers for better audio streaming
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
   }
 }));
+app.options('/api/uploads/*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range, Accept-Ranges');
+  res.status(200).end();
+});
+  //  res.setHeader('Access-Control-Allow-Origin', '*');
+  //  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+   // res.setHeader('Access-Control-Allow-Headers', 'Range');
+    //res.setHeader('Accept-Ranges', 'bytes');
+    //res.setHeader('Cache-Control', 'public, max-age=86400');
+    
+    //if (path.endsWith('.mp3')) {
+      //res.setHeader('Content-Type', 'audio/mpeg');
+    //} else if (path.endsWith('.wav')) {
+      //res.setHeader('Content-Type', 'audio/wav');
+    //} else if (path.endsWith('.ogg')) {
+      //res.setHeader('Content-Type', 'audio/ogg');
+    //} else if (path.endsWith('.m4a')) {
+      //res.setHeader('Content-Type', 'audio/mp4');
+    //}
+  //}
+//}));
 
 // Enhanced file upload with better error handling (your existing code continues...)
 
@@ -282,13 +314,14 @@ app.post('/api/upload', (req, res) => {
     const fileInfo = {
       filename: req.file.filename,
       originalName: req.file.originalname,
-      url:`${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`,
+      url:`${req.protocol}://${req.get('host')}/api/uploads/${req.file.filename}`,
       size: req.file.size,
       mimetype: req.file.mimetype,
       uploadedAt: Date.now()
     };
 
     console.log(`File uploaded: ${fileInfo.originalName} (${(fileInfo.size / 1024 / 1024).toFixed(2)}MB)`);
+    console.log(`File URL: ${fileInfo.url}`); // ✅ ADD LOGGING
     res.json({ success: true, file: fileInfo });
   });
 });
@@ -799,6 +832,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
