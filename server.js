@@ -69,16 +69,6 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.some(allowed => origin.includes(allowed))) {
-      callback(null, true);
-    } 
-     else {
-     callback(new Error('Not allowed by CORS'));
-     }
-  },
-  credentials: true
-}));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
@@ -808,6 +798,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
