@@ -108,23 +108,7 @@ app.options('/api/uploads/*', (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range, Accept-Ranges');
   res.status(200).end();
 });
-  //  res.setHeader('Access-Control-Allow-Origin', '*');
-  //  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-   // res.setHeader('Access-Control-Allow-Headers', 'Range');
-    //res.setHeader('Accept-Ranges', 'bytes');
-    //res.setHeader('Cache-Control', 'public, max-age=86400');
-    
-    //if (path.endsWith('.mp3')) {
-      //res.setHeader('Content-Type', 'audio/mpeg');
-    //} else if (path.endsWith('.wav')) {
-      //res.setHeader('Content-Type', 'audio/wav');
-    //} else if (path.endsWith('.ogg')) {
-      //res.setHeader('Content-Type', 'audio/ogg');
-    //} else if (path.endsWith('.m4a')) {
-      //res.setHeader('Content-Type', 'audio/mp4');
-    //}
-  //}
-//}));
+
 
 // Enhanced file upload with better error handling (your existing code continues...)
 
@@ -580,47 +564,57 @@ io.on('connection', (socket) => {
   });
 
   // Enhanced playback controls with better synchronization
-  socket.on('play', (startTime = null, callback) => {
-    try {
-      const roomCode = userRooms.get(userId);
-      const room = rooms.get(roomCode);
-      
-      if (!room || room.hostId !== userId) {
-        const error = 'Only host can control playback';
-        if (callback) callback({ success: false, error });
-        return socket.emit('error', { message: error });
-      }
-
-      if (!room.currentTrack) {
-        const error = 'No track loaded';
-        if (callback) callback({ success: false, error });
-        return socket.emit('error', { message: error });
-      }
-
-      room.play(startTime);
-      
-      console.log(`▶️ Play command in room ${roomCode} at time ${startTime}`);
-      
-      if (callback) callback({ success: true });
-      
-      // Enhanced sync with network delay compensation
-      const syncDelay = 150; // 150ms to account for network latency
-      const syncTime = Date.now() + syncDelay;
-      
-      io.to(roomCode).emit('sync-play', {
-        startTime: room.currentTime,
-        syncTime,
-        roomState: room.getRoomState(),
-        timestamp: Date.now()
-      });
-      
-    } catch (error) {
-      console.error('❌ Play error:', error);
-      const errorMsg = 'Failed to play track';
-      if (callback) callback({ success: false, error: errorMsg });
-      socket.emit('error', { message: errorMsg });
+ socket.on('play', (startTime = null, callback) => {
+  try {
+    const roomCode = userRooms.get(userId);
+    const room = rooms.get(roomCode);
+    
+    if (!room || room.hostId !== userId) {
+      const error = 'Only host can control playback';
+      if (callback) callback({ success: false, error });
+      return socket.emit('error', { message: error });
     }
-  });
+
+    if (!room.currentTrack) {
+      const error = 'No track loaded';
+      if (callback) callback({ success: false, error });
+      return socket.emit('error', { message: error });
+    }
+
+    // ✅ ENHANCED: More precise timing calculation
+    const now = Date.now();
+    const targetStartTime = startTime !== null ? startTime : room.getCurrentTime();
+    
+    // ✅ NEW: Reduced sync delay for better precision (50ms instead of 150ms)
+    const syncDelay = 50;
+    const syncTime = now + syncDelay;
+    
+    // ✅ NEW: Store precise timing in room
+    room.lastSyncTime = syncTime;
+    room.lastSyncPosition = targetStartTime;
+    room.play(targetStartTime);
+    
+    console.log(`▶️ Play command in room ${roomCode} at time ${targetStartTime}s, sync at ${syncTime}`);
+    
+    if (callback) callback({ success: true });
+    
+    // ✅ ENHANCED: Include server timestamp for better client sync
+    io.to(roomCode).emit('sync-play', {
+      startTime: targetStartTime,
+      syncTime: syncTime,
+      serverTime: now,
+      roomState: room.getRoomState(),
+      timestamp: now,
+      precision: 'high' // ✅ NEW: Flag for high precision mode
+    });
+    
+  } catch (error) {
+    console.error('❌ Play error:', error);
+    const errorMsg = 'Failed to play track';
+    if (callback) callback({ success: false, error: errorMsg });
+    socket.emit('error', { message: errorMsg });
+  }
+});
 
   socket.on('pause', (callback) => {
     try {
@@ -766,6 +760,43 @@ io.on('connection', (socket) => {
     if (callback) callback({ timestamp: Date.now() });
   });
 });
+socket.on('get-sync-state', (callback) => {
+  try {
+    const roomCode = userRooms.get(userId);
+    const room = rooms.get(roomCode);
+    
+    if (room) {
+      // ✅ NEW: Provide real-time sync state
+      const currentTime = room.getCurrentTime();
+      const syncState = {
+        currentTime,
+        isPlaying: room.isPlaying,
+        lastSyncTime: room.lastSyncTime || Date.now(),
+        serverTime: Date.now(),
+        trackDuration: room.currentTrack?.duration || null
+      };
+      
+      callback({ 
+        success: true, 
+        roomState: {
+          ...room.getRoomState(),
+          ...syncState
+        }
+      });
+    } else {
+      callback({ 
+        success: false, 
+        error: 'Not in a room' 
+      });
+    }
+  } catch (error) {
+    console.error('❌ Get sync state error:', error);
+    callback({ 
+      success: false, 
+      error: 'Failed to get sync state' 
+    });
+  }
+});
 
 // Cleanup and maintenance
 setInterval(() => {
@@ -832,6 +863,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
