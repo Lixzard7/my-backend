@@ -759,8 +759,7 @@ io.on('connection', (socket) => {
   socket.on('ping', (callback) => {
     if (callback) callback({ timestamp: Date.now() });
   });
-});
-socket.on('get-sync-state', (callback) => {
+  socket.on('get-sync-state', (callback) => {
   try {
     const roomCode = userRooms.get(userId);
     const room = rooms.get(roomCode);
@@ -796,6 +795,7 @@ socket.on('get-sync-state', (callback) => {
       error: 'Failed to get sync state' 
     });
   }
+});
 });
 
 // Cleanup and maintenance
@@ -863,6 +863,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
