@@ -153,10 +153,177 @@ class Room {
     this.currentTime = 0;
     this.lastUpdateTime = Date.now();
     this.trackStartTime = null;
-    this.playlist = [];
+    this.queue = [];
     this.currentTrackIndex = 0;
     this.volume = 1.0;
     this.createdAt = Date.now();
+    //change
+    this.repeatMode = 'off'; // 'off', 'one', 'all'
+    this.shuffleMode = false;
+    this.originalQueue = []; // For shuffle/unshuffle
+    this.playedTracks = []; // History
+  }
+   addToQueue(track) {
+    const queueItem = {
+      ...track,
+      id: Date.now() + Math.random(),
+      addedAt: Date.now(),
+      addedBy: this.hostId
+    };
+    
+    this.queue.push(queueItem);
+    
+    // If no current track, set the first one
+    if (!this.currentTrack && this.queue.length === 1) {
+      this.setCurrentTrack(0);
+    }
+    
+    return queueItem;
+  }
+  
+  removeFromQueue(trackId) {
+    const index = this.queue.findIndex(track => track.id === trackId);
+    if (index !== -1) {
+      this.queue.splice(index, 1);
+      
+      // Adjust current track index if needed
+      if (index < this.currentTrackIndex) {
+        this.currentTrackIndex--;
+      } else if (index === this.currentTrackIndex) {
+        // Current track was removed
+        if (this.currentTrackIndex >= this.queue.length) {
+          this.currentTrackIndex = 0;
+        }
+        this.setCurrentTrack(this.currentTrackIndex);
+      }
+    }
+  }
+  
+  setCurrentTrack(index) {
+    if (index >= 0 && index < this.queue.length) {
+      this.currentTrackIndex = index;
+      this.currentTrack = this.queue[index];
+      this.currentTime = 0;
+      this.isPlaying = false;
+      this.lastUpdateTime = Date.now();
+      this.trackStartTime = null;
+      return true;
+    } else if (this.queue.length === 0) {
+      this.currentTrack = null;
+      this.currentTrackIndex = 0;
+      return false;
+    }
+    return false;
+  }
+  
+  nextTrack() {
+    if (this.queue.length === 0) return false;
+    
+    // Add current track to played history
+    if (this.currentTrack) {
+      this.playedTracks.push({...this.currentTrack, playedAt: Date.now()});
+      // Keep only last 50 played tracks
+      if (this.playedTracks.length > 50) {
+        this.playedTracks = this.playedTracks.slice(-50);
+      }
+    }
+    
+    let nextIndex;
+    
+    if (this.repeatMode === 'one') {
+      nextIndex = this.currentTrackIndex; // Same track
+    } else if (this.repeatMode === 'all') {
+      nextIndex = (this.currentTrackIndex + 1) % this.queue.length;
+    } else {
+      nextIndex = this.currentTrackIndex + 1;
+      if (nextIndex >= this.queue.length) {
+        return false; // No more tracks
+      }
+    }
+    
+    return this.setCurrentTrack(nextIndex);
+  }
+  
+  previousTrack() {
+    if (this.queue.length === 0) return false;
+    
+    let prevIndex;
+    
+    if (this.currentTrackIndex > 0) {
+      prevIndex = this.currentTrackIndex - 1;
+    } else if (this.repeatMode === 'all') {
+      prevIndex = this.queue.length - 1;
+    } else {
+      return false;
+    }
+    
+    return this.setCurrentTrack(prevIndex);
+  }
+  
+  clearQueue() {
+    this.queue = [];
+    this.currentTrack = null;
+    this.currentTrackIndex = 0;
+    this.currentTime = 0;
+    this.isPlaying = false;
+    this.originalQueue = [];
+  }
+  
+  shuffleQueue() {
+    if (this.queue.length <= 1) return;
+    
+    // Save original order
+    this.originalQueue = [...this.queue];
+    
+    // Keep current track at the beginning
+    const currentTrack = this.queue[this.currentTrackIndex];
+    const otherTracks = this.queue.filter((_, index) => index !== this.currentTrackIndex);
+    
+    // Shuffle other tracks
+    for (let i = otherTracks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [otherTracks[i], otherTracks[j]] = [otherTracks[j], otherTracks[i]];
+    }
+    
+    this.queue = [currentTrack, ...otherTracks];
+    this.currentTrackIndex = 0;
+    this.shuffleMode = true;
+  }
+  
+  unshuffleQueue() {
+    if (this.originalQueue.length > 0) {
+      const currentTrackId = this.currentTrack?.id;
+      this.queue = [...this.originalQueue];
+      
+      // Find current track position in unshuffled queue
+      if (currentTrackId) {
+        this.currentTrackIndex = this.queue.findIndex(track => track.id === currentTrackId);
+        if (this.currentTrackIndex === -1) this.currentTrackIndex = 0;
+      }
+      
+      this.originalQueue = [];
+      this.shuffleMode = false;
+    }
+  }
+
+  // ===== ENHANCED: Update getRoomState method =====
+  getRoomState() {
+    return {
+      id: this.id,
+      hostId: this.hostId,
+      users: Array.from(this.users.values()),
+      currentTrack: this.currentTrack,
+      isPlaying: this.isPlaying,
+      currentTime: this.getCurrentTime(),
+      userCount: this.users.size,
+      volume: this.volume,
+      queue: this.queue, // Enhanced
+      currentTrackIndex: this.currentTrackIndex,
+      repeatMode: this.repeatMode, // New
+      shuffleMode: this.shuffleMode, // New
+      createdAt: this.createdAt
+    };
+    //change
   }
 
   addUser(userId, userInfo = {}) {
@@ -712,6 +879,309 @@ io.on('connection', (socket) => {
       });
     }
   });
+  //change
+   // Get room state
+  socket.on('get-room-state', (callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (room) {
+        callback({ 
+          success: true, 
+          roomState: room.getRoomState() 
+        });
+      } else {
+        callback({ 
+          success: false, 
+          error: 'Not in a room' 
+        });
+      }
+    } catch (error) {
+      console.error('⚠ Get room state error:', error);
+      callback({ 
+        success: false, 
+        error: 'Failed to get room state' 
+      });
+    }
+  });
+
+  // ===== NEW QUEUE MANAGEMENT EVENTS =====
+  
+  // Add to queue
+  socket.on('add-to-queue', (trackData, callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can manage queue';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      const queueItem = room.addToQueue(trackData);
+      
+      console.log(`🎼 Track added to queue in room ${roomCode}: ${trackData.title}`);
+      
+      if (callback) callback({ success: true, queueItem });
+      
+      io.to(roomCode).emit('queue-updated', {
+        queue: room.queue,
+        currentTrackIndex: room.currentTrackIndex,
+        currentTrack: room.currentTrack,
+        roomState: room.getRoomState(),
+        action: 'added',
+        track: queueItem
+      });
+      
+    } catch (error) {
+      console.error('⚠ Add to queue error:', error);
+      if (callback) callback({ success: false, error: 'Failed to add to queue' });
+    }
+  });
+
+  // Remove from queue
+  socket.on('remove-from-queue', (trackId, callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can manage queue';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      room.removeFromQueue(trackId);
+      
+      if (callback) callback({ success: true });
+      
+      io.to(roomCode).emit('queue-updated', {
+        queue: room.queue,
+        currentTrackIndex: room.currentTrackIndex,
+        currentTrack: room.currentTrack,
+        roomState: room.getRoomState(),
+        action: 'removed',
+        trackId
+      });
+      
+    } catch (error) {
+      console.error('⚠ Remove from queue error:', error);
+      if (callback) callback({ success: false, error: 'Failed to remove from queue' });
+    }
+  });
+
+  // Next track
+  socket.on('next-track', (callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can control playback';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      const hasNext = room.nextTrack();
+      
+      if (hasNext) {
+        console.log(`⏭️ Next track in room ${roomCode}: ${room.currentTrack.title}`);
+        
+        if (callback) callback({ success: true });
+        
+        io.to(roomCode).emit('track-changed', {
+          track: room.currentTrack,
+          queue: room.queue,
+          currentTrackIndex: room.currentTrackIndex,
+          roomState: room.getRoomState(),
+          action: 'next'
+        });
+      } else {
+        if (callback) callback({ success: false, error: 'No more tracks in queue' });
+      }
+      
+    } catch (error) {
+      console.error('⚠ Next track error:', error);
+      if (callback) callback({ success: false, error: 'Failed to skip track' });
+    }
+  });
+
+  // Previous track
+  socket.on('previous-track', (callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can control playback';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      const hasPrev = room.previousTrack();
+      
+      if (hasPrev) {
+        console.log(`⏮️ Previous track in room ${roomCode}: ${room.currentTrack.title}`);
+        
+        if (callback) callback({ success: true });
+        
+        io.to(roomCode).emit('track-changed', {
+          track: room.currentTrack,
+          queue: room.queue,
+          currentTrackIndex: room.currentTrackIndex,
+          roomState: room.getRoomState(),
+          action: 'previous'
+        });
+      } else {
+        if (callback) callback({ success: false, error: 'No previous track' });
+      }
+      
+    } catch (error) {
+      console.error('⚠ Previous track error:', error);
+      if (callback) callback({ success: false, error: 'Failed to go to previous track' });
+    }
+  });
+
+  // Clear queue
+  socket.on('clear-queue', (callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can manage queue';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      room.clearQueue();
+      
+      console.log(`🗑️ Queue cleared in room ${roomCode}`);
+      
+      if (callback) callback({ success: true });
+      
+      io.to(roomCode).emit('queue-updated', {
+        queue: [],
+        currentTrackIndex: 0,
+        currentTrack: null,
+        roomState: room.getRoomState(),
+        action: 'cleared'
+      });
+      
+    } catch (error) {
+      console.error('⚠ Clear queue error:', error);
+      if (callback) callback({ success: false, error: 'Failed to clear queue' });
+    }
+  });
+
+  // Shuffle queue
+  socket.on('shuffle-queue', (callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can manage queue';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      if (room.shuffleMode) {
+        room.unshuffleQueue();
+      } else {
+        room.shuffleQueue();
+      }
+      
+      console.log(`🔀 Queue ${room.shuffleMode ? 'shuffled' : 'unshuffled'} in room ${roomCode}`);
+      
+      if (callback) callback({ success: true, shuffleMode: room.shuffleMode });
+      
+      io.to(roomCode).emit('queue-updated', {
+        queue: room.queue,
+        currentTrackIndex: room.currentTrackIndex,
+        currentTrack: room.currentTrack,
+        shuffleMode: room.shuffleMode,
+        roomState: room.getRoomState(),
+        action: room.shuffleMode ? 'shuffled' : 'unshuffled'
+      });
+      
+    } catch (error) {
+      console.error('⚠ Shuffle queue error:', error);
+      if (callback) callback({ success: false, error: 'Failed to shuffle queue' });
+    }
+  });
+
+  // Set repeat mode
+  socket.on('set-repeat-mode', (mode, callback) => {
+    try {
+      const roomCode = userRooms.get(userId);
+      const room = rooms.get(roomCode);
+      
+      if (!room || room.hostId !== userId) {
+        const error = 'Only host can manage queue';
+        if (callback) callback({ success: false, error });
+        return;
+      }
+
+      const validModes = ['off', 'one', 'all'];
+      if (!validModes.includes(mode)) {
+        if (callback) callback({ success: false, error: 'Invalid repeat mode' });
+        return;
+      }
+
+      room.repeatMode = mode;
+      
+      console.log(`🔁 Repeat mode set to ${mode} in room ${roomCode}`);
+      
+      if (callback) callback({ success: true, repeatMode: mode });
+      
+      io.to(roomCode).emit('repeat-mode-changed', {
+        repeatMode: mode,
+        roomState: room.getRoomState()
+      });
+      
+    } catch (error) {
+      console.error('⚠ Set repeat mode error:', error);
+      if (callback) callback({ success: false, error: 'Failed to set repeat mode' });
+    }
+  });
+  // Set current track by index
+socket.on('set-current-track', (index, callback) => {
+  try {
+    const roomCode = userRooms.get(userId);
+    const room = rooms.get(roomCode);
+    
+    if (!room || room.hostId !== userId) {
+      const error = 'Only host can change tracks';
+      if (callback) callback({ success: false, error });
+      return;
+    }
+
+    if (room.setCurrentTrack(index)) {
+      console.log(`🎵 Current track set to index ${index} in room ${roomCode}`);
+      
+      if (callback) callback({ success: true });
+      
+      io.to(roomCode).emit('set-current-track', {
+        track: room.currentTrack,
+        queue: room.queue,
+        currentTrackIndex: room.currentTrackIndex,
+        roomState: room.getRoomState()
+      });
+    } else {
+      if (callback) callback({ success: false, error: 'Invalid track index' });
+    }
+    
+  } catch (error) {
+    console.error('⚠ Set current track error:', error);
+    if (callback) callback({ success: false, error: 'Failed to set current track' });
+  }
+});
+
+  // ===== END NEW QUEUE MANAGEMENT EVENTS =====
+  //change
 
   // Enhanced disconnect handling
   socket.on('disconnect', (reason) => {
@@ -863,6 +1333,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 
 });
+
 
 
 
